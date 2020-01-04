@@ -26,6 +26,8 @@ export {MidiMe};
  * Class for sampling from a multivariate Gaussian distribution.
  */
 class SamplingLayer extends tf.layers.Layer {
+    static className = 'SamplingLayer';
+
     constructor() {
         super({});
     }
@@ -44,6 +46,8 @@ class SamplingLayer extends tf.layers.Layer {
         return 'SamplingLayer';
     }
 }
+
+tf.serialization.registerClass(SamplingLayer);
 
 /**
  * An interface for providing configurable properties to the MidiMe model.
@@ -132,7 +136,8 @@ class MidiMe {
         this.encoder = this.getEncoder(x);
         const [z, ,] = this.encoder.apply(x) as tf.SymbolicTensor[];
 
-        // Decoder model, goes from the output of the encoder, to the final output.
+        // Decoder model, goes from the output of the encoder,
+        // to the final output.
         this.decoder = this.getDecoder(z.shape.slice(1));
         const y = this.decoder.apply(z) as tf.SymbolicTensor;
 
@@ -187,13 +192,15 @@ class MidiMe {
         }
         const optimizer = tf.train.adam(learningRate);
 
-        // TODO(notwaldorf): If there's a ton of data we should consider batching.
+        // TODO(notwaldorf): If there's a ton of data we should consider
+        //batching.
         for (let e = 0; e < this.config.epochs; e++) {
             await tf.nextFrame();
 
             await optimizer.minimize(() => {
                 return tf.tidy(() => {
-                    const [, zMu, zSigma] = this.encoder.predict(xTrain) as tf.Tensor[];
+                    const [, zMu, zSigma] =
+                        this.encoder.predict(xTrain) as tf.Tensor[];
                     const y = this.vae.predict(xTrain) as tf.Tensor;
                     const loss = this.loss(zMu, zSigma, y, xTrain);
 
@@ -201,7 +208,9 @@ class MidiMe {
                         callback(e, {
                             y,
                             total: loss.totalLoss.arraySync(),
-                            losses: [loss.reconLoss.arraySync(), loss.latentLoss.arraySync()]
+                            losses: [
+                                loss.reconLoss.arraySync(),
+                                loss.latentLoss.arraySync()]
                         });
                     }
                     return loss.totalLoss;
@@ -283,8 +292,9 @@ class MidiMe {
 
         for (let i = 0; i < this.config['encoder_layers'].length; i++) {
             x = tf.layers
-                .dense(
-                    {units: this.config['encoder_layers'][i], activation: 'relu'})
+                .dense({
+                    units: this.config['encoder_layers'][i],
+                    activation: 'relu'})
                 .apply(x) as tf.SymbolicTensor;
         }
         const mu =
@@ -292,12 +302,20 @@ class MidiMe {
             tf.SymbolicTensor;
 
         const sigma =
-            this.getAffineLayers(x, this.config['latent_size'], input, true) as
+            this.getAffineLayers(
+                x,
+                this.config['latent_size'],
+                input,
+                true) as
             tf.SymbolicTensor;
 
         const z = new SamplingLayer().apply([mu, sigma]) as tf.SymbolicTensor;
 
-        return tf.model({inputs: input, outputs: [z, mu, sigma], name: 'encoder'});
+        return tf.model( {
+            inputs: input,
+            outputs: [z, mu, sigma],
+            name: 'encoder'
+        });
     }
 
     private getDecoder(shape: tf.Shape) {
@@ -306,17 +324,29 @@ class MidiMe {
 
         for (let i = 0; i < this.config['decoder_layers'].length; i++) {
             x = tf.layers
-                .dense(
-                    {units: this.config['decoder_layers'][i], activation: 'relu'})
+                .dense({
+                    units: this.config['decoder_layers'][i],
+                    activation: 'relu'})
                 .apply(x) as tf.SymbolicTensor;
         }
-        const mu = this.getAffineLayers(x, this.config['input_size'], z, false) as
+        const mu =
+            this.getAffineLayers(
+                x,
+                this.config['input_size'],
+                z,
+                false) as
             tf.SymbolicTensor;
         return tf.model({inputs: z, outputs: mu, name: 'decoder'});
     }
 
     private loss(
-        zMu: tf.Tensor, zSigma: tf.Tensor, yPred: tf.Tensor, yTrue: tf.Tensor): {latentLoss: tf.Scalar, reconLoss: tf.Scalar, totalLoss: tf.Scalar} {
+        zMu: tf.Tensor,
+        zSigma: tf.Tensor,
+        yPred: tf.Tensor,
+        yTrue: tf.Tensor): {
+            latentLoss: tf.Scalar,
+            reconLoss: tf.Scalar,
+            totalLoss: tf.Scalar} {
         return tf.tidy(() => {
             // How closely the z matches a unit gaussian.
             const latentLoss = this.klLoss(zMu, zSigma);
