@@ -335,7 +335,10 @@ abstract class BaseDecoder extends Decoder {
           initialInput :
           tf.zeros([batchSize, this.outputDims]) as tf.Tensor2D;
       const splitControls = controls ?
-          tf.split(tf.tile(controls, [batchSize, 1]), controls.shape[0]) :
+          tf.split(
+              tf.tile(controls.asType("float32"),
+                  [batchSize, 1]),
+                  controls.shape[0]) :
           undefined;
       for (let i = 0; i < length; ++i) {
         const toConcat =
@@ -925,9 +928,10 @@ class MusicVAE {
     const encodedChordProgression = this.dataConverter.SEGMENTED_BY_TRACK ?
         tf.concat2d(
             [
-              this.chordEncoder.encode(constants.NO_CHORD).expandDims(0),
+              this.chordEncoder.encode(constants.NO_CHORD)
+                  .asType("float32").expandDims(0),
               this.chordEncoder.encodeProgression(
-                  chordProgression, numChordSteps - 1)
+                  chordProgression, numChordSteps - 1).asType("float32")
             ],
             0) :
         this.chordEncoder.encodeProgression(chordProgression, numChordSteps);
