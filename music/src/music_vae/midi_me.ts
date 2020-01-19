@@ -126,8 +126,10 @@ class MidiMe {
     /**
      * Instantiates the `Encoder`, `Decoder` and the main `VAE`.
      */
-    initialize() {
-        this.dispose();
+    initialize(skipDispose = false) {
+        if (!skipDispose) {
+            this.dispose();
+        }
 
         const startTime = performance.now();
         const x = tf.input({shape: [this.config['input_size']]});
@@ -147,8 +149,14 @@ class MidiMe {
         logging.logWithDuration('Initialized model', startTime, 'MidiMe');
     }
 
-    async initializeFromFile(filePathEncoder: string, filePathDecoder: string) {
-        this.dispose();
+    async initializeFromFile(
+        filePathEncoder: string,
+        filePathDecoder: string,
+        skipDispose = false) {
+
+        if (!skipDispose) {
+            this.dispose();
+        }
 
         const startTime = performance.now();
 
