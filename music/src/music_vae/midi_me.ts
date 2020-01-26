@@ -283,6 +283,14 @@ class MidiMe {
         const [z_, ,] = this.encoder.predict(z) as tf.Tensor[];
         return z_;
     }
+    
+    async encodeDist(z: tf.Tensor2D) {
+        if (!this.initialized) {
+            await this.initialize();
+        }
+        const [ , mu_, sig_] = this.encoder.predict(z) as tf.Tensor[];
+        return [mu_, sig_];
+    }
 
     /**
      * Reconstructs an input latent vector.
